@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 from matplotlib import style
 style.use('seaborn-v0_8')
 
-"""Creating Kokh fractal.
+"""Creating Koch fractal.
 I crate this fractal using 4,functions:
 
 one will do transformation.
@@ -32,7 +32,7 @@ def rotate(x,theta):
 
 #now that we have built the basic functions lets make the fractal
 
-def kokh(x,n):
+def koch(x,n):
   for i in range(n):
     #for k in range(len(x)):
     x=x/3#for scaling
@@ -48,14 +48,56 @@ def kokh(x,n):
   plt.plot(x[:,0],x[:,1],color='black',marker=None)
   plt.xlim()
   plt.ylim(bottom=-.2,top=1)
-  plt.title(f'Kokh Curve-order {n}')
+  plt.title(f'Koch Curve-order {n}')
   plt.show()
 
 x_init = np.array([[0, 0], [1, 0]])
 
-kokh(x_init, 10)
+koch(x_init, 10)
 
 #now lets pass a traingle
 x_init = np.array([[0, 0],[1,1],[2,0]])
-kokh(x_init, 10)
+koch(x_init, 10)
+
+"""now lets make Heighway Dragon!
+i will create it using two function,first function for rotation and onother one for reflection!
+"""
+
+def rotate_scale(theta,scale,x):
+  rotation_matrix=np.array([[np.cos(theta),-np.sin(theta)],[np.sin(theta),np.cos(theta)]])
+  r=x[1]-x[0]
+  r = (x[1] - x[0]) @ rotation_matrix.T
+  r=r*scale
+  r=r+x[0]
+  return r
+
+
+def Heighway(n,x):
+  y=x.copy()
+  for k in range(n):
+    a=np.array([x[0]])
+
+    for i in range(len(x)-1):
+      if i%2==0:
+        new_point=rotate_scale(np.pi/4,1/np.sqrt(2),x[i:i+2])
+      else:
+        new_point=rotate_scale(-np.pi/4,1/np.sqrt(2),x[i:i+2])
+      a = np.vstack((a,new_point,x[i + 1]))
+    x=a
+
+  plt.plot(x[0:len(x)//2+1, 0], x[0:len(x)//2+1, 1], color='blue', linewidth=1.5)
+  plt.plot(x[len(x)//2:, 0], x[len(x)//2:, 1], color='red', linewidth=1.5)
+  plt.title(f'Heighway Dragon Fractal - Order {n}')
+  plt.axis("equal")
+  plt.show()
+
+x= np.array([[0, 0], [1, 0]])
+Heighway(1,x)
+Heighway(2,x)
+Heighway(3,x)
+Heighway(4,x)
+Heighway(6,x)
+Heighway(10,x)
+Heighway(15,x)
+Heighway(17,x)
 
