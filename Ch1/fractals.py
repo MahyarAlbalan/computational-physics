@@ -101,3 +101,47 @@ Heighway(10,x)
 Heighway(15,x)
 Heighway(17,x)
 
+"""now lets create Sierpinski fractal"""
+
+def translate(x,r):
+  return x+r
+
+
+def Sierpinski(n,x):
+
+  for i in range(n):
+    x1=x/2
+    x2=translate(x1,np.array([1/2,np.sqrt(3)/2]))
+    x3=translate(x1,np.array([1,0]))
+    x=np.vstack((x1,x2,x3))
+
+  for k in range(0, len(x),3):
+      plt.fill(x[k:k+3, 0], x[k:k+3, 1], color='blue', alpha=1)
+
+  plt.title(f'Sierpinski Fractal - Order {n}')
+  plt.show()
+a=np.array([[0,0],[1,np.sqrt(3)],[2,0]],dtype=np.float64)
+Sierpinski(1,a)
+Sierpinski(2,a)
+Sierpinski(3,a)
+Sierpinski(5,a)
+Sierpinski(8,a)
+
+"""*Khayyam-Pascal's Triangle *"""
+
+from scipy.special import comb
+def khayyam_pascal(n):
+    t=np.zeros((n,n))
+    for i in range(n):
+
+        for j in range(i+1):
+            t[i,j]=(comb(i, j, exact=True) % 2)
+        t[i]=np.roll(t[i],shift=(n-1-i)//2)#i kinda adjust the triangle here!
+    return t
+#the top function will create khayyam_pascal triangle and because we want to plot the result based on odd and even numbers,i mark them by 0(even) and 1(odd)
+
+a=khayyam_pascal(1000)
+plt.imshow(a,cmap='binary')
+plt.title('khayyam_pascal triangle')
+plt.show()
+#Wow, what a suprise!it just looks like seirpinski triangle!but its run time is fairly lower than the code for creating sierpinski's triangle!
