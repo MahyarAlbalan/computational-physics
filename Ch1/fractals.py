@@ -46,8 +46,8 @@ def koch(x,n):
     x=np.vstack((x,x2,x3,x4))
 
   plt.plot(x[:,0],x[:,1],color='black',marker=None)
-  plt.xlim()
-  plt.ylim(bottom=-.2,top=1)
+  plt.xlim(0,x[:,0].max())
+  plt.ylim(-0.2,1)
   plt.title(f'Koch Curve-order {n}')
   plt.show()
 
@@ -88,7 +88,7 @@ def Heighway(n,x):
   plt.plot(x[0:len(x)//2+1, 0], x[0:len(x)//2+1, 1], color='blue', linewidth=1.5)
   plt.plot(x[len(x)//2:, 0], x[len(x)//2:, 1], color='red', linewidth=1.5)
   plt.title(f'Heighway Dragon Fractal - Order {n}')
-  plt.axis("equal")
+  plt.axis("off")
   plt.show()
 
 x= np.array([[0, 0], [1, 0]])
@@ -119,6 +119,7 @@ def Sierpinski(n,x):
       plt.fill(x[k:k+3, 0], x[k:k+3, 1], color='blue', alpha=1)
 
   plt.title(f'Sierpinski Fractal - Order {n}')
+  plt.axis('off')
   plt.show()
 a=np.array([[0,0],[1,np.sqrt(3)],[2,0]],dtype=np.float64)
 Sierpinski(1,a)
@@ -143,5 +144,107 @@ def khayyam_pascal(n):
 a=khayyam_pascal(1000)
 plt.imshow(a,cmap='binary')
 plt.title('khayyam_pascal triangle')
+plt.axis('off')
 plt.show()
 #Wow, what a suprise!it just looks like seirpinski triangle!but its run time is fairly lower than the code for creating sierpinski's triangle!
+
+"""Creating sierpinski triangle using random generator
+
+I performed 3 steps to create sierpinski's triangle
+
+first one will scale the whole shape by factor of 1/2
+
+second and third ones will transform the scaled shape,and Union of all these functions will create sierpiski's triangle.
+"""
+
+def rand_Sierpinski(n,p):
+  x=np.column_stack((np.random.uniform(0,2,n),np.random.uniform(0,np.sqrt(3),n)))
+
+  for i in range(p):
+    c=np.random.randint(0,3,n)#here i used vectorized calculation with numpy array and delete one of the loops(that one which was iterating through all n points)
+    translations = np.array([[0,0],[0.5,np.sqrt(3)/2],[1,0]])
+    x=x*0.5+translations[c]
+
+  plt.scatter(x[:,0],x[:,1],s=0.05,marker='.',c='black')
+  plt.title(f'Sierpinski triangle with {n} points')
+  plt.axis('off')
+  plt.show()
+
+
+rand_Sierpinski(1000,100)
+rand_Sierpinski(1000,1000)
+rand_Sierpinski(5000,1000)
+rand_Sierpinski(10000,1000)
+rand_Sierpinski(100000,1000)
+rand_Sierpinski(1000000,1000)
+
+"""now lets generate Fern leaf fractal.
+
+here there are 4 generator function
+
+first one will scale the original shape by factor 0.84 then rotates by -0.05 rad and then translate [0,0.16] (if we consider y axis range is from 0 to 2)(result in light blue shape in the lecture)
+
+second one will scale by factor 0.34,then rotates by 0.68 rad,then translate by [0,0.16](this will result in red rectangular in the lacture)
+
+in the third one original shape reflects by y axis,then scale by 0.42 and then rotate by -0.6 rad,then translate by [0,0.055]
+
+in the last one for stem transformation which it does the transformation [0,0.16*y]
+"""
+
+def Fern_leaf(n,p):
+  x=np.column_stack((np.random.uniform(-0.5,0.5,n),np.random.uniform(0,2,n)))
+  translations = [lambda x: 0.84*(np.dot(np.array([[np.cos(-0.05),-np.sin(-0.05)],[np.sin(-0.05),np.cos(-0.05)]]),x))+np.array([0,0.16]),
+                  lambda x: 0.42*(np.dot(np.array([[np.cos(-0.6),-np.sin(-0.6)],[np.sin(-0.6),np.cos(-0.6)]]),np.dot(np.array([[-1,0],[0,1]]),x)))+np.array([0,0.055]),
+                  lambda x: 0.34*(np.dot(np.array([[np.cos(0.68),-np.sin(0.68)],[np.sin(0.68),np.cos(0.68)]]),x))+np.array([0,0.16]),
+                  lambda x: np.array([0, 0.16*x[1]])
+
+                  ]
+
+  for i in range(p):
+    c=np.random.randint(0,4,n)#here  again i used vectorized calculation with numpy array and delete one of the loops(that one which was iterating through all n points)
+    x=np.array([translations[j](x[i]) for i,j in enumerate(c)])
+  plt.scatter(x[:,0],x[:,1],s=0.05,marker='.',c='green')
+  plt.title(f'Sierpinski triangle with {n} points')
+  plt.axis('off')
+  plt.show()
+
+
+Fern_leaf(10000,100)
+Fern_leaf(100000,50)
+Fern_leaf(1000000,50)
+Fern_leaf(10000000,15)
+
+"""after reading about Barnsley Fern fractal i understand that probabilities for each translation are not the same, it probablities are:
+
+main transformation (85%)
+
+Left leaf transformation (7%)
+
+Right leaf transformation (7%)
+
+Stem transformation (2%)
+
+so lets correct the code based on these probablities.
+"""
+
+def Fern_leaf(n,p):
+  x=np.column_stack((np.random.uniform(-0.5,0.5,n),np.random.uniform(0,2,n)))
+  translations = [lambda x: 0.84*(np.dot(np.array([[np.cos(-0.05),-np.sin(-0.05)],[np.sin(-0.05),np.cos(-0.05)]]),x))+np.array([0,0.16]),
+                  lambda x: 0.42*(np.dot(np.array([[np.cos(-0.6),-np.sin(-0.6)],[np.sin(-0.6),np.cos(-0.6)]]),np.dot(np.array([[-1,0],[0,1]]),x)))+np.array([0,0.055]),
+                  lambda x: 0.34*(np.dot(np.array([[np.cos(0.68),-np.sin(0.68)],[np.sin(0.68),np.cos(0.68)]]),x))+np.array([0,0.16]),
+                  lambda x: np.array([0, 0.16*x[1]])
+
+                  ]
+
+  for i in range(p):
+    c=np.random.choice(4,size=n,p=[0.84,0.07,0.07,0.02])#here  again i used vectorized calculation with numpy array and delete one of the loops(that one which was iterating through all n points)
+    x=np.array([translations[j](x[i]) for i,j in enumerate(c)])
+  plt.scatter(x[:,0],x[:,1],s=0.05,marker='.',c='green')
+  plt.title(f'Sierpinski triangle with {n} points')
+  plt.axis('off')
+  plt.show()
+
+
+Fern_leaf(10000,100)
+Fern_leaf(100000,50)
+Fern_leaf(1000000,50)
