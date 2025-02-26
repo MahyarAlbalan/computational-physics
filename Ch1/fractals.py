@@ -51,7 +51,7 @@ def koch(x,n):
   plt.show()
 
 x_init = np.array([[0, 0], [1, 0]])
-
+koch(x_init, 0)
 koch(x_init, 1)
 koch(x_init, 2)
 koch(x_init, 3)
@@ -286,14 +286,14 @@ def julia(c,iteration=100):
   b=np.linspace(-2,2,4000)
   a,b=np.meshgrid(a,b)
   x=a+1j*b
-  #now i will create a mask for saving time and dont apply function each time to the points that are still in the bound
+  #now i will create a mask for saving time and apply function each time only to the points that are still in the bound
   m=np.ones(x.shape,dtype=bool)
   counter=np.zeros(m.shape,dtype=np.uint16)
 
   for i in range(iteration):
     x[m]=x[m]**2+c
     m= m&(np.abs(x)<3)
-    counter[m]=i#counting
+    counter[m]=i#counting how many time we should apply function to the point so it goes out of the bound
   plt.figure(facecolor='black')
   plt.imshow(counter,cmap="inferno",extent=(-2, 2, -2, 2))
   plt.axis('off')
