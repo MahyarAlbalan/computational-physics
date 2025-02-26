@@ -46,18 +46,49 @@ def koch(x,n):
     x=np.vstack((x,x2,x3,x4))
 
   plt.plot(x[:,0],x[:,1],color='black',marker=None)
-  plt.xlim(0,x[:,0].max())
-  plt.ylim(-0.2,1)
+  plt.axis('equal')
   plt.title(f'Koch Curve-order {n}')
   plt.show()
 
 x_init = np.array([[0, 0], [1, 0]])
 
+koch(x_init, 1)
+koch(x_init, 2)
+koch(x_init, 3)
+koch(x_init, 5)
+koch(x_init, 8)
 koch(x_init, 10)
 
-#now lets pass a traingle
 x_init = np.array([[0, 0],[1,1],[2,0]])
 koch(x_init, 10)
+
+#now i use the koch function to create whole snowflake
+def koch(x,n):
+  for i in range(n):
+    #for k in range(len(x)):
+    x=x/3#for scaling
+    x2=rotate(x.T,np.pi/3).T
+    x2=transform(x2,x[-1])
+    #lets create the other one
+    x3=rotate(x.T,-np.pi/3).T
+    x3=transform(x3,x2[-1])
+    #now lets craete the right tail
+    x4=transform(x,x3[-1])
+    x=np.vstack((x,x2,x3,x4))
+
+  return x
+
+
+x_init = np.array([[0, 0],[1,1],[2,0]])
+x=koch(x_init, 10)
+x_reflect=x.copy()
+x_reflect[:,1]=-x[:,1]
+plt.plot(x[:,0],x[:,1],color='black')
+plt.plot(x_reflect[:,0],x_reflect[:,1],color='black')
+plt.axis('off')
+
+plt.title(f'Koch Snowflake-order {10}')
+plt.show()
 
 """now lets make Heighway Dragon!
 i will create it using two function,first function for rotation and onother one for reflection!
@@ -203,8 +234,8 @@ def Fern_leaf(n,p):
   for i in range(p):
     c=np.random.randint(0,4,n)#here  again i used vectorized calculation with numpy array and delete one of the loops(that one which was iterating through all n points)
     x=np.array([translations[j](x[i]) for i,j in enumerate(c)])
-  plt.scatter(x[:,0],x[:,1],s=0.05,marker='.',c='green')
-  plt.title(f'Sierpinski triangle with {n} points')
+  plt.scatter(x[:,0],x[:,1],s=0.1,marker='.',c='green')
+  plt.title(f'Fern_leaf with {n} points')
   plt.axis('off')
   plt.show()
 
@@ -212,7 +243,6 @@ def Fern_leaf(n,p):
 Fern_leaf(10000,100)
 Fern_leaf(100000,50)
 Fern_leaf(1000000,50)
-Fern_leaf(10000000,15)
 
 """after reading about Barnsley Fern fractal i understand that probabilities for each translation are not the same, it probablities are:
 
@@ -240,7 +270,7 @@ def Fern_leaf(n,p):
     c=np.random.choice(4,size=n,p=[0.84,0.07,0.07,0.02])#here  again i used vectorized calculation with numpy array and delete one of the loops(that one which was iterating through all n points)
     x=np.array([translations[j](x[i]) for i,j in enumerate(c)])
   plt.scatter(x[:,0],x[:,1],s=0.05,marker='.',c='green')
-  plt.title(f'Sierpinski triangle with {n} points')
+  plt.title(f'Fern_leaf with {n} points')
   plt.axis('off')
   plt.show()
 
@@ -248,3 +278,34 @@ def Fern_leaf(n,p):
 Fern_leaf(10000,100)
 Fern_leaf(100000,50)
 Fern_leaf(1000000,50)
+
+"""**Julia Set**"""
+
+def julia(c,iteration=100):
+  a=np.linspace(-2,2,4000)#i could choose lower number of points for better runtime,but this is good and doesnt take too long.
+  b=np.linspace(-2,2,4000)
+  a,b=np.meshgrid(a,b)
+  x=a+1j*b
+  #now i will create a mask for saving time and dont apply function each time to the points that are still in the bound
+  m=np.ones(x.shape,dtype=bool)
+  counter=np.zeros(m.shape,dtype=np.uint16)
+
+  for i in range(iteration):
+    x[m]=x[m]**2+c
+    m= m&(np.abs(x)<3)
+    counter[m]=i#counting
+  plt.figure(facecolor='black')
+  plt.imshow(counter,cmap="inferno",extent=(-2, 2, -2, 2))
+  plt.axis('off')
+  plt.title(label=f'Julia set with c={c}',color='white')
+  plt.show()
+
+julia(c=complex(0,-1))
+julia(c=-0.4-1j*0.6)
+julia(c=-0.6)
+julia(c=-0.12-1j*0.75)
+julia(c=-0.4+1j*0.6)
+julia(c=-0.8+1j*0.16)
+julia(c=-np.pi/4)
+julia(c=-1j*np.pi/4)
+julia(c=-np.pi/4-1j*np.pi/4)
