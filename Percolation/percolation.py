@@ -11,24 +11,49 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib import style
-import matplotlib.colors as mcolors
+from matplotlib.colors import ListedColormap
+
 style.use('ggplot')
 
 """# **1.Percolation**"""
 
 #first part of this question is fairly simple,i will make a function to return resulting matrix(filled with 0s and 1s)
-
+np.random.seed(0)
 def Percolation(L,p):
   matrix=np.random.rand(L,L)
   return (matrix<=p).astype(bool)
 
 #lets check how it works
-mat=Percolation(2,0.5)
+L2=Percolation(2,0.5)
+L3=Percolation(3,0.5)
+L10=Percolation(10,0.5)
+L100=Percolation(100,0.5)
+
+fig,ax=plt.subplots(1,3,figsize=(12,5))
 cmap=mcolors.ListedColormap(['blue','red'])#i represent 0s with blue and 1s with red
-plt.matshow(mat,cmap=cmap)
-plt.grid(False)
+ax[0].matshow(L2,cmap=cmap)
+ax[0].grid(visible=False)
+ax[1].matshow(L3,cmap=cmap)
+ax[1].grid(visible=False)
+ax[2].matshow(L10,cmap=cmap)
+ax[2].grid(visible=False)
+ax[0].set_title('L = 2',pad=10)
+ax[1].set_title('L = 3',pad=10)
+ax[2].set_title('L = 10',pad=10)
+cbar = fig.colorbar(ax[2].images[0],ax=ax,orientation='vertical',fraction=0.01,pad=0.04)
+cbar.set_ticks([0.25, 0.75])
+cbar.set_ticklabels(['0 (Blue)', '1 (Red)'])
+fig.suptitle('Percolation Matrices')
+for a in ax:
+  a.axis("off")
+
 plt.show()
-mat
+
+plt.matshow(L100,cmap=cmap)
+plt.grid(visible=False)
+plt.axis("off")
+plt.title('L = 100')
+plt.show()
 
 #now i make a function that calculate the resulting matrix has transverse percolation or not,here i used Depth-First Search (DFS) algorithm,it is one of the common graph algorithm for this kind of questions
 def can_traverse_matrix(matrix):
@@ -63,10 +88,274 @@ def dfs(matrix, row, col, visited):
     return False
 
 
-print(can_traverse_matrix(mat))#here you can see it algorithm works!
+print(can_traverse_matrix(L10))#here you can see it algorithm works!
 
 mat=Percolation(10,0.6)
 plt.matshow(mat,cmap=cmap)
 plt.grid(visible=False)
 plt.show()
 can_traverse_matrix(mat)
+
+"""# **2.Coloring algorithm**"""
+
+def coloring(L,p):
+  mat=np.zeros(shape=(L,L),dtype=np.uint64)
+  mat[:,0] = 1
+  mat[:,-1] = L*L
+  probab=np.random.rand(L ,L )
+  counter = 2
+  for i in range(L ):
+    for j in range(1,L-1 ):
+      if probab[i,j] <= p:
+        mat[i,j]=counter
+        counter+=1
+
+        if mat[i,j] != 0:
+          neighbours = [ (-1 ,0 ) , (1 ,0 ) , (0 ,-1 ) , (0 ,1 ) ]
+          nonzero=[]
+
+          for x,y in neighbours:
+            if 0<= i+x <L and 0<=j+y<L and mat[i+x,j+y] != 0:
+              nonzero.append([x,y])
+
+          if len(nonzero)==0:
+            continue
+          if len(nonzero)==1:
+            mat[i,j]=mat[i+nonzero[0][0],j+nonzero[0][1]]
+
+          else:
+            neighbours_value=np.array([mat[i+x,j+y] for x,y in nonzero])
+            v=np.min(neighbours_value)
+            mat[i,j]=v
+            for x,y in nonzero:
+              mat[i+x,j+y]=v
+
+
+  if np.any(mat[:,-1]==1):
+    return (mat,1)
+  else:
+    return (mat,0)
+
+mat, result = coloring(100, 0.675)
+
+plt.imshow(mat[:,:-1], cmap='viridis')#here i droped the right side for better visualization,it doesnt matter in the final result if we keep it
+plt.grid(visible=False)
+plt.axis('off')
+cbar = plt.colorbar(label='Value')
+
+plt.title(f"Percolation: {'Yes' if result == 1 else 'No'}")
+plt.show()
+
+mat[mat!=1]=0#for better visualization i only kept 1s
+plt.imshow(mat[:,:-1], cmap=ListedColormap(['blue','red']))
+plt.grid(visible=False)
+plt.axis('off')
+cbar = plt.colorbar(fraction=0.05,pad=0.05)
+cbar.set_ticks([0.25, 0.75])
+cbar.set_ticklabels(['0 (blue)', '1 (red)'])
+plt.title(f"Percolation: {'Yes' if result == 1 else 'No'}")
+plt.show()
+
+"""# **3.Hoshen-Kopelman**"""
+
+def Hoshen_Kopelman(L,p):
+  mat = np.zeros(shape = (L,L), dtype = np.uint64)
+  mat[:,0] = 1#in the text the example matrix hasnt this 1s column so after this i will do this again for the general form
+  probability=np.random.rand(L,L)
+  Label=[0,1]
+  S=[0,0]
+
+  for j in range(1,L):
+    for i in range(L):
+      if probability[i,j] <= p:
+        neighbors = [ (-1,0) , (0,-1) ]
+        nonzero_neighbors=[]
+        for x,y in neighbors:
+          if 0<= i+x <L and 0<=j+y<L and mat[i+x,j+y] != 0:
+            nonzero_neighbors.append(mat[i+x,j+y])
+        if len(nonzero_neighbors)==0:
+          mat[i,j] = Label[-1] + 1
+          Label.append(Label[-1] + 1)
+          S.append(1)
+
+        elif len(nonzero_neighbors) == 1:
+          mat[i,j] = nonzero_neighbors[0]
+          S[nonzero_neighbors[0]]+=1
+        else:
+          min_label = min(nonzero_neighbors)
+          mat[i, j] = min_label
+          for label in nonzero_neighbors:
+            if label != min_label:
+              S[min_label] += S[label]+1
+              S[label] = 0
+              mat[mat == label] = min_label
+
+  if np.any(mat[:,-1]==1):
+    return (mat,S,1)
+  else:
+    return (mat,S,0)
+
+mat , S, result = Hoshen_Kopelman(10,0.68)
+
+plt.matshow(mat,cmap='viridis')
+plt.grid(visible=False)
+plt.axis('off')
+cbar = plt.colorbar(fraction=0.045,label='Value')
+plt.title(f"Percolation: {'Yes' if result == 1 else 'No'}")
+plt.show()
+
+#for better visualization i only keep 1s and assign 0 to other labels
+mat[mat!=1]=0
+plt.matshow(mat,cmap=ListedColormap(['blue','red']))
+plt.grid(visible=False)
+plt.axis('off')
+cbar = plt.colorbar(fraction=0.045)
+cbar.set_ticks([0.25,0.75])
+cbar.set_ticklabels(['0 (blue)','1 (red)'])
+plt.title(f"Percolation: {'Yes' if result == 1 else 'No'}")
+plt.show()
+
+# Commented out IPython magic to ensure Python compatibility.
+# %time mat,s,result=Hoshen_Kopelman(1000,0.6)
+
+# Commented out IPython magic to ensure Python compatibility.
+# %time mat,result=coloring(1000,0.6)
+
+def Hoshen_Kopelman2(L,p):
+  mat = np.zeros(shape = (L,L), dtype = np.uint64)
+  probability=np.random.rand(L,L)
+  Label=[0]#first only label is 0
+  S=[0]#wont follow the number of zeros
+
+  for j in range(L):
+
+    for i in range(L):
+      if probability[i,j] <= p:
+        neighbors = [ (-1,0) , (0,-1) ]
+        nonzero_neighbors=[]
+
+        for x,y in neighbors:
+          if 0<= i+x <L and 0<=j+y<L and mat[i+x,j+y] != 0:
+            nonzero_neighbors.append(mat[i+x,j+y])
+        if len(nonzero_neighbors)==0:
+          mat[i,j] = Label[-1] + 1
+          Label.append(Label[-1] + 1)
+          S.append(1)
+
+        elif len(nonzero_neighbors) == 1:
+          mat[i,j] = nonzero_neighbors[0]
+          S[nonzero_neighbors[0]]+=1
+
+        else:
+          min_label = min(nonzero_neighbors)
+          mat[i, j] = min_label
+          for label in nonzero_neighbors:
+            if label != min_label:
+              S[min_label] += S[label]+1
+              S[label] = 0
+              mat[mat == label] = min_label
+
+  values = []
+  for i in range(L):
+      if mat[i, 0] != 0:
+          for j in range(L):
+              if mat[i, 0] == mat[j, -1]:  #percolation condition
+                  values.append(mat[i, 0])#i want to have every value which represents infinite cluster
+
+  if len(values) != 0:
+    return (mat,values,S,1)
+  else:
+    return (mat,values,S,0)
+
+mat , values,S, result = Hoshen_Kopelman2(100,0.65)
+plt.matshow(mat,cmap='viridis')
+plt.grid(visible=False)
+plt.axis('off')
+cbar = plt.colorbar(fraction=0.045,label='Value')
+plt.title(f"Percolation: {'Yes' if result == 1 else 'No'}")
+plt.show()
+
+"""# **4.infinite cluster probability**"""
+
+#i wont change the code from previous questions
+pdistribution = np.arange(0.0, 1.05, 0.05)
+Q=[]
+for p in pdistribution:
+  counter = 0
+
+  for i in range(100):
+    mat, result = coloring(10,p)
+    if result == 1:
+      counter += 1
+
+  Q.append(counter/100)
+
+
+plt.plot(pdistribution,Q,linestyle='--',c='blue')
+plt.xlabel('probability of activation')
+plt.ylabel('infinite cluster probability')
+#plt.title('Infinite cluster probablity for L=10')
+plt.show()
+
+L = [10, 20, 40, 80, 160]
+result=np.zeros(shape=(len(L),len(pdistribution)))
+
+for i,l in enumerate(L):
+
+  for j,p in enumerate(pdistribution):
+    counter = 0
+
+    for k in range(100):
+      mat, percolation_result = coloring(l,p)
+      if percolation_result == 1:
+        counter += 1
+
+    result[i,j]=counter/100
+
+color = ['brown', 'red', 'yellow', 'green', 'blue']
+handles = []
+for i,l in enumerate(L):
+  line, = plt.plot(pdistribution, result[i], linestyle='--', c=color[i], label=f'L={l}')
+  handles.append(line)
+
+plt.xlabel('probability of activation')
+plt.ylabel('infinite cluster probability')
+plt.legend(handles=handles)
+plt.show()
+
+np.argmax(result[-1])*0.05
+
+"""# **5.Probability of being part of an infinite cluster**"""
+
+pdistribution = np.arange(0.0, 1.05, 0.05)
+L = [10, 20, 40, 80, 160]
+result=np.zeros(shape=(len(L),len(pdistribution)))
+
+for i, l in enumerate(L):
+
+  for j, p in enumerate(pdistribution):
+    prob= []
+    for k in range(100):
+      mat, values,s ,percolation_result = Hoshen_Kopelman2(l,p)#i used second function cuz the first function here wont work properly,beacuse initial 1s column it is biased
+      mask=np.isin(mat,values)
+      mat[mask]=1
+      mat[~mask]=0#here i delete every element that arent in the infinite cluster
+      if percolation_result == 1:
+        n = np.count_nonzero(mat)#total values of 1s(values on the infinite clusters)
+        prob.append(n / ( l* (l - 1)))
+
+      else:
+        prob.append(0)
+
+    result[i,j]=np.mean(prob)
+
+color = ['brown', 'red', 'yellow', 'green', 'blue']
+handles = []
+for i,l in enumerate(L):
+  line, = plt.plot(pdistribution, result[i], linestyle='--', c=color[i], label=f'L={l}')
+  handles.append(line)
+
+plt.xlabel('probability of activation')
+plt.ylabel('Probability of being part of an infinite cluster')
+plt.legend(handles=handles)
+plt.show()
