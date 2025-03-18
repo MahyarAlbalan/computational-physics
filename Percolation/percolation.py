@@ -224,7 +224,7 @@ plt.show()
 def Hoshen_Kopelman2(L,p):
   mat = np.zeros(shape = (L,L), dtype = np.uint64)
   probability=np.random.rand(L,L)
-  Label=[0]#first only label is 0
+  Label=[0]#at first, only label is 0
   S=[0]#wont follow the number of zeros
 
   for j in range(L):
@@ -249,9 +249,10 @@ def Hoshen_Kopelman2(L,p):
         else:
           min_label = min(nonzero_neighbors)
           mat[i, j] = min_label
+          S[min_label] += 1
           for label in nonzero_neighbors:
             if label != min_label:
-              S[min_label] += S[label]+1
+              S[min_label] += S[label]
               S[label] = 0
               mat[mat == label] = min_label
 
@@ -332,7 +333,6 @@ L = [10, 20, 40, 80, 160]
 result=np.zeros(shape=(len(L),len(pdistribution)))
 
 for i, l in enumerate(L):
-
   for j, p in enumerate(pdistribution):
     prob= []
     for k in range(100):
@@ -358,4 +358,263 @@ for i,l in enumerate(L):
 plt.xlabel('probability of activation')
 plt.ylabel('Probability of being part of an infinite cluster')
 plt.legend(handles=handles)
+plt.show()
+
+"""# **6.Correlation length**"""
+
+#here i will create a function that takes the result of Hoshen-Kopeman2 func and calculate correcaltion length
+def correlation_length(mat,S,value):
+  values=[]
+
+  for i, val in enumerate(S):
+    if val!=0 and (i not in value):#i wont consider infinite clusters
+      y, x = np.where(mat == i)
+      if len(x) == 0 or len(y) == 0:#making sure cluster is not empty
+        continue
+      x_cm = np.mean(x)
+      y_cm = np.mean(y) #calculating center of mass
+
+      rg = np.sqrt(np.mean((x - x_cm) ** 2 + (y - y_cm) ** 2))#calculating Radius of Gyration
+      values.append(rg)
+  if len(values)==0:
+    return 0
+  else:
+    return np.mean(values)
+
+L = [10, 20, 40, 80, 160]
+p = np.arange(0.0, 1.05, 0.05)
+corr_len=np.zeros(shape = (len(L), len(p)))
+
+for i, l in enumerate(L):
+  for j,p_val in enumerate(p):
+    v=[]
+    for k in range(100):
+      mat, values, S, result = Hoshen_Kopelman2(l,p_val)
+      v.append(correlation_length(mat, S, values))
+
+    if len(v)==0:
+      corr_len[i,j]=0
+    else:
+      corr_len[i,j]=np.mean(v)
+
+color = plt.cm.viridis(np.linspace(0, 1, len(L)))
+
+for i, l in enumerate(L):
+    plt.plot(p, corr_len[i], linestyle='-', color=color[i], label=f'L={l}')
+
+plt.xlabel("Occupation Probability (p)")
+plt.ylabel("Correlation Length")
+plt.title("Correlation Length vs Probability")
+plt.legend()
+plt.grid(True)
+plt.show()
+
+#the critical point is around p=0.5 and p=0.7 i will only use this range for better visualization
+L = [10, 20, 40, 80, 160]
+p = np.arange(0.5, 0.7, 0.0025)
+corr_len=np.zeros(shape = (len(L), len(p)))
+
+for i, l in enumerate(L):
+  for j,p_val in enumerate(p):
+    v=[]
+    for k in range(100):
+      mat, values, S, result = Hoshen_Kopelman2(l,p_val)
+      v.append(correlation_length(mat, S, values))
+
+    if len(v)==0:
+      corr_len[i,j]=0
+    else:
+      corr_len[i,j]=np.mean(v)
+
+color = plt.cm.viridis(np.linspace(0, 1, len(L)))
+
+for i, l in enumerate(L):
+    plt.plot(p, corr_len[i], linestyle='-', color=color[i], label=f'L={l}')
+
+plt.xlabel("Occupation Probability (p)")
+plt.ylabel("Correlation Length")
+plt.title("Correlation Length vs Probability")
+plt.legend()
+plt.grid(True)
+plt.show()
+
+from sklearn.linear_model import LinearRegression
+p_cs = np.argmax(corr_len, axis=1)*0.0025+0.5
+pc=0.5927
+model=LinearRegression()
+model.fit(np.log(np.abs(p_cs-pc)).reshape(-1,1),np.log(L))
+model.coef_[0]
+#you can see pc for L=160 is 0.56 and for infinite sample size it is 0.5927 its fairly close beacuse critical exponent is very close to its theoratical value 1.333(4/3)
+
+"""# **7.critical exponent for binding percolation**"""
+
+#first i will update hoshen kopelman function so it can handle binding percolation
+def Hoshen_kopelman_binding(L,p):
+
+  mat=np.zeros(shape=(L,L),dtype=np.uint64)
+  hbond=np.random.rand(L,L-1)#contains probability for horizontal bonds
+  vbond=np.random.rand(L-1,L)#the same for vertical bonds
+
+  value=1
+  S=[0]#again for saving each cluster size
+  for j in range(L):
+    for i in range(L):
+      neighbors=[]
+      if i > 0 and  vbond[i-1,j] <= p:
+        neighbors.append(mat[i-1,j])
+
+      if j > 0 and hbond[i,j-1] <= p:
+        neighbors.append(mat[i,j-1])
+
+      if len(neighbors)==0:
+        mat[i,j]=value
+        S.append(1)
+        value+=1
+
+      elif len(neighbors)==1:
+        mat[i,j]=neighbors[0]
+        S[neighbors[0]]+=1
+
+      else:
+        min_label=min(neighbors)
+        mat[i,j]=min_label
+        S[min_label]+=1
+        for label in neighbors:
+          if label != min_label:
+            S[min_label]+=S[label]
+            S[label]=0
+            mat[mat==label]=min_label
+
+  values=set()
+  for i in range(L):
+    for j in range(L):
+      if mat[i, 0] != 0 and mat[i, 0] == mat[j, -1]:
+        values.add(mat[i,0])
+
+  return (mat, S, list(values))
+
+#now the proccess is as before
+L = [10, 20, 40, 80, 160]
+p = np.arange(0.0, 1.05, 0.05)
+corr_len=np.zeros(shape = (len(L), len(p)))
+
+for i, l in enumerate(L):
+  for j,p_val in enumerate(p):
+    v=[]
+    for k in range(50):
+      mat, S, values = Hoshen_kopelman_binding(l,p_val)
+      v.append(correlation_length(mat, S, values))
+
+    if len(v)==0:
+      corr_len[i,j]=0
+    else:
+      corr_len[i,j]=np.mean(v)
+color = plt.cm.viridis(np.linspace(0, 1, len(L)))
+
+for i, l in enumerate(L):
+    plt.plot(p, corr_len[i], linestyle='-', color=color[i], label=f'L={l}')
+
+plt.xlabel("Occupation Probability (p)")
+plt.ylabel("Correlation Length")
+plt.title("Correlation Length vs Probability")
+plt.legend()
+plt.grid(True)
+plt.show()
+
+#the critical point is around p=0.5 and p=0.7 i will only use this range for better visualization
+L = [10, 20, 40, 80, 160]
+p = np.arange(0.43, 0.55, 0.0025)
+corr_len=np.zeros(shape = (len(L), len(p)))
+
+for i, l in enumerate(L):
+  for j,p_val in enumerate(p):
+    v=[]
+    for k in range(50):
+      mat, S, values = Hoshen_kopelman_binding(l,p_val)
+      v.append(correlation_length(mat, S, values))
+
+    if len(v)==0:
+      corr_len[i,j]=0
+    else:
+      corr_len[i,j]=np.mean(v)
+
+color = plt.cm.viridis(np.linspace(0, 1, len(L)))
+
+for i, l in enumerate(L):
+    plt.plot(p, corr_len[i], linestyle='-', color=color[i], label=f'L={l}')
+
+plt.xlabel("Occupation Probability (p)")
+plt.ylabel("Correlation Length")
+plt.title("Correlation Length vs Probability")
+plt.legend()
+plt.grid(True)
+plt.show()
+
+from sklearn.linear_model import LinearRegression
+p_cs = np.argmax(corr_len, axis=1)*0.0025+0.5
+pc=0.5
+model=LinearRegression()
+model.fit(np.log(np.abs(p_cs-pc)).reshape(-1,1),np.log(L))
+model.coef_[0]
+
+"""# **8.Cluster Growth**"""
+
+def Cluster_Growth(mat, p, i, j, pro):
+  neighbors = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+  if mat[i, j] != 0:
+        return
+  if p[i, j] <= pro:
+        mat[i, j] = 1
+  else:
+        mat[i, j] = 2#i used 2 for block cells
+        return
+
+  for x, y in neighbors:
+    if 0 <= i + x < mat.shape[0] and 0 <= j + y < mat.shape[1] and mat[i + x, j+y] == 0:
+      Cluster_Growth(mat, p, i + x, j + y, pro)
+
+def calculate_cluster_properties(mat):#the same as correlation_length function, just update it a little for this question
+    x, y = np.where(mat == 1)
+    s = len(x)
+    if s == 0:
+        return 0, 0
+
+    x_cm, y_cm = np.mean(x), np.mean(y)
+    rg = np.sqrt(np.mean((x - x_cm)**2 + (y - y_cm)**2))
+    return s, rg
+
+L = 100
+mat = np.zeros(shape=(L,L))
+p = np.random.rand(L,L)
+
+
+pro_val=[0.5, 0.55, 0.59]
+sizes = np.zeros(shape=(len(pro_val),100))
+rgs = np.zeros(shape=(len(pro_val),100))#for saving results
+
+
+for k, pro in enumerate(pro_val):
+  for i in range(100 ):
+    mat = np.zeros((L, L))
+    prob = np.random.rand(L, L)
+    #xstart, ystart = np.random.randint(0,L,size=2)
+    Cluster_Growth(mat, prob, L//2, L//2, pro)#here i start from center,starting point could be random
+    sizes[k, i], rgs[k, i] = calculate_cluster_properties(mat)
+
+
+plt.figure(figsize=(10, 6))
+
+colors = ['red', 'green', 'blue']
+
+for i, p in enumerate(pro_val):
+    log_s = np.log(sizes[i])
+    log_rg = np.log(rgs[i])
+    plt.scatter(log_rg, log_s, label=f'p = {p}', color=colors[i], alpha=0.6)
+
+
+plt.xlabel(r'$\log(\xi)$')
+plt.ylabel(r'$\log(s)$')
+plt.title('Log-Log Plot of Cluster Size vs Correlation Length')
+plt.legend()
+plt.grid(True)
 plt.show()
