@@ -618,3 +618,32 @@ plt.title('Log-Log Plot of Cluster Size vs Correlation Length')
 plt.legend()
 plt.grid(True)
 plt.show()
+
+"""# **9.Transformation**"""
+
+p=np.arange(start=0, stop=1.0001, step=0.0001)
+y1 = 1 - p
+y2 = (1 - p)**4 + 4 * p**2 *(1 - p)**2 + 4* p * (1 - p)**3
+plt.plot(p, y1, label='(1-p)',color='red')
+plt.plot(p, y2, label='(1-p)^4 + 4*p^2*(1-p)^2 + 4*p*(1-p)^3',color='blue')
+plt.xlabel('p')
+plt.ylabel('y')
+plt.legend()
+plt.show()
+p[np.abs(y1-y2)<0.00003]
+
+plt.plot(p, y1-y2,color='green')
+plt.xlabel('p')
+plt.ylabel('difference')
+plt.show()
+
+#now lets solve the equation
+from scipy.optimize import fsolve
+
+def equation(p):
+    return p - (p**4 + 4 * p**3 * (1 - p) + 4 * p**2 * (1 - p)**2)
+
+initial_guess = 0.5
+solution = fsolve(equation, initial_guess)
+print("The solution is:", solution)
+#so the another result is p=0.382 which is the probability of having inactive cell which is equavalent to p=0.618 of the probability of having active cell.
