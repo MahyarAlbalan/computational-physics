@@ -10,6 +10,7 @@ Original file is located at
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import style
+import seaborn as sns
 style.use('seaborn-v0_8-paper')
 
 """# **2.1D Random Walk**"""
@@ -110,19 +111,17 @@ plt.show()
 #for better visualization first i will seperate each particle based on the boundry it hitted then plot its quantiles
 left_hit = lifespan[lifespan[:, 1] == -1]
 right_hit = lifespan[lifespan[:, 1] == 1]
-left_quantiles = np.quantile(left_hit[:, 0], np.linspace(0, 1, 101))
-left_quantiles = np.digitize(left_hit[:, 0], left_quantiles)
 
-right_quantiles = np.quantile(right_hit[:, 0], np.linspace(0, 1, 101))
-left_quantiles = np.digitize(right_hit[:, 0], right_quantiles)
 
 sns.histplot(left_hit[:, 0], bins=100, kde=True,color='b', label='Left Boundry')
 plt.ylabel(ylabel='counts')
 plt.xlabel(xlabel='Lifespan')
+plt.legend()
 plt.show()
 sns.histplot(right_hit[:, 0], bins=100, kde=True,color='r', label='Right Boundry')
 plt.ylabel(ylabel='counts')
 plt.xlabel(xlabel='Lifespan')
+plt.legend()
 plt.show()
 
 starting_point = np.arange(-9,10)
@@ -196,11 +195,13 @@ table = plt.table(
 table.auto_set_font_size(False)
 table.font_size = 10
 table.scale(1.2, 1.2)
+table.rowColours = ['lightblue'] * len(promat)
 plt.axis('off')
 
 for key, cell in table.get_celld().items():
     cell.set_linewidth(0.5)
     cell.set_edgecolor('black')
+plt.tight_layout()
 plt.show()
 
 promat = probability_tabel()
@@ -249,4 +250,267 @@ plt.plot(starting_point, rightpro, c='b',linestyle = '--')
 plt.xlabel('Starting Point')
 plt.xticks(starting_point)
 plt.yticks(np.linspace(0,1,6))
+plt.show()
+
+"""# **5.2D Random Walk**"""
+
+def random_walk2D(step=10000):
+  a = [1, 2, 3, 4]
+  cor = [[0, 0]]
+
+  for i in range(step):
+    x = np.random.choice(a)
+    if x == 1:
+      cor.append([1, 0])
+    elif x == 2:
+      cor.append([-1, 0])
+    elif x == 3:
+      cor.append([0, 1])
+    else:
+      cor.append([0, -1])
+  cor = np.array(cor)
+  return np.cumsum(cor, axis = 0)
+
+position = random_walk2D(step = 100)
+plt.plot(position[:,0], position[:,1], c='b', linestyle = '-', label='Trajectory')
+plt.grid(True, linestyle='--', alpha=0.5)
+x_min, x_max = -np.abs(position[:, 0]).max(), np.abs(position[:, 0]).max()
+y_min, y_max = -np.abs(position[:, 1]).max(), np.abs(position[:, 1]).max()
+plt.xticks(np.linspace(x_min, x_max, 11))
+plt.yticks(np.linspace(y_min, y_max, 11))
+plt.xlabel('x')
+plt.ylabel('y')
+plt.show()
+
+position = random_walk2D(step = 100000)
+plt.plot(position[:,0], position[:,1], c='b', linestyle = '-', label='Trajectory')
+plt.grid(True, linestyle='--', alpha=0.5)
+x_min, x_max = -np.abs(position[:, 0]).max(), np.abs(position[:, 0]).max()
+y_min, y_max = -np.abs(position[:, 1]).max(), np.abs(position[:, 1]).max()
+plt.xticks(np.linspace(x_min, x_max, 11))
+plt.yticks(np.linspace(y_min, y_max, 11))
+plt.xlabel('x')
+plt.ylabel('y')
+plt.show()
+
+#now lets calcilate <r^2>
+a = np.zeros(shape=(1001,2),dtype=np.float64)
+for i in range(1000):#1000 walkers
+  pos = random_walk2D(step=1000)
+  a += pos**2
+a /= 1000
+avg_r2 = a[:, 0] + a[:, 1]
+
+steps = np.arange(1001)
+plt.plot(steps, avg_r2, c='b',linestyle = '--')
+plt.xlabel('Time')
+plt.ylabel('<$r^2$>')
+plt.show()
+
+model = LinearRegression()
+model.fit(steps.reshape(-1, 1), avg_r2)
+print(f'slope is {np.round(model.coef_[0],3)}')
+#we expect from theory that slope shoulde be m=1(D=1/2 for our simulation)
+
+"""# **6.Diffusion limited Aggregation (DLA)**"""
+
+def random_walk2D(step=10000, xpos=0, ypos=0):
+  a = [1, 2, 3, 4]
+  cor = [[xpos, ypos]]
+
+  for i in range(step):
+    x = np.random.choice(a)
+    if x == 1:
+      cor.append([1, 0])
+    elif x == 2:
+      cor.append([-1, 0])
+    elif x == 3:
+      cor.append([0, 1])
+    else:
+      cor.append([0, -1])
+  cor = np.array(cor)
+  return np.cumsum(cor, axis = 0)
+
+def DLA(n=5000, s=200):
+    mat = np.zeros((s, s), dtype=np.uint32)  # uint8 is sufficient
+    h = 0
+    k = 0
+
+    for k in range(n):
+        posx, posy = np.random.randint(0, s), h + 3
+        traj = random_walk2D(step=1000, xpos=posx, ypos=posy)#here we have trajectory of single particle
+        for i in range(len(traj)):
+          x, y = traj[i]
+          if x < 0 or x >= s or y < 0 or y >= s:#boundry conditions
+            break
+
+          if y == 0:#hitting the floor
+            mat[s-1, x] = k + 1
+            h = max(h, 1)
+            k += 1
+            break
+          elif y > 0 and (mat[s-1-(y-1), x] != 0 or (x > 0 and mat[s-1-y, x-1] != 0) or (x < s-1 and mat[s-1-y, x+1] != 0)):  # check if there is any particle below, to the right or to the left at each step
+              mat[s-1-y, x] = k +1
+              h = max(h, y + 1)
+              k += 1
+              break
+
+
+
+    return mat
+
+from matplotlib.colors import ListedColormap
+mat = DLA(n=10000)
+cmap = 'viridis'
+plt.matshow(mat, cmap=cmap)
+plt.axis('off')
+plt.show()
+
+"""## **7.DLA Growth from a single point**"""
+
+#here the proccess is the same as previuos problem only we have to grow it from a point
+
+
+def DLA_frompoint(n=1000, s=200, boundary_shape='circle'):
+    mat = np.zeros((s, s), dtype=np.uint16)
+    center = s // 2
+    mat[center, center] = 1
+    h = 0 #for calculating radius of growth
+
+    for k in range(2, n + 2):
+
+        if boundary_shape == 'circle':
+            angle =np.random.uniform(0, 2 * np.pi)
+            radius = min(center - 1, h+5)  # for not getting out of bound i esed min function here
+            posx = center + int(radius *np.cos(angle))
+            posy = center + int(radius *np.sin(angle))
+        else:  # square condition
+            margin = min(center - 1, h+5)#again for not getting out of  bounds
+            side = np.random.choice(['top', 'bottom', 'left', 'right'])
+            if side == 'top':
+                posx, posy = np.random.randint(center - margin, center + margin), center + margin
+            elif side == 'bottom':
+                posx, posy = np.random.randint(center - margin, center + margin), center - margin
+            elif side == 'left':
+                posx, posy = center - margin, np.random.randint(center - margin, center+margin)
+            else:
+                posx,posy = center+margin, np.random.randint(center-margin, center+margin)
+
+        for x, y in random_walk2D(500,posx, posy).tolist():
+            if x < 0 or x >= s or y < 0 or y >= s:
+                break
+            # Check 4-directional neighbors for sticking condition
+            neighbors = [(0, -1), (0, 1), (-1, 0), (1, 0)]
+            for dx, dy in neighbors:
+                nx, ny = x + dx, y + dy
+                if 0 <= nx < s and 0 <= ny < s:
+                  if mat[int(ny), int(nx)] != 0:
+                     if 0 <= x < s and 0 <= y < s:
+                      mat[int(y), int(x)] = 1
+                      h = max(h, np.sqrt((x - center)**2 + (y - center)**2))#updating the hieght
+                      break
+            else:
+                continue
+
+    return mat
+
+
+
+
+mat = DLA_frompoint(n=4000,s= 450, boundary_shape='square')
+cmap = 'binary'
+plt.matshow(mat, cmap=cmap)
+plt.axis('off')
+plt.show()
+
+
+mat = DLA_frompoint(n=1000,s =500)
+cmap = 'binary'
+plt.matshow(mat, cmap=cmap)
+plt.axis('off')
+plt.show()
+
+"""# **8.Self-Avoiding Random Walk (SAW)**
+
+"""
+
+def random_walk2D(step=1000, xpos=0, ypos=0):
+  pos = np.array([[xpos, ypos]])
+  neigh = np.array([[-1, 0], [1, 0], [0, -1], [0, 1]])
+  visited = {tuple(pos[-1])}
+
+  for i in range(step):
+    nei = []#for saving unseen neighbors
+    for x in neigh:
+      n = pos[-1] + x
+      if tuple(n) not in visited:
+        nei.append(x)
+    nei = np.array(nei)
+
+    if 0 == len(nei):
+      return i #returning total steps
+
+    x = np.random.randint(len(nei))
+    new_pos = pos[-1] + nei[x]
+    visited.add(tuple(new_pos))
+    pos = np.vstack((pos, new_pos))
+
+  return step#if particle doesnt get trapped
+
+
+total_steps = []
+for i in range(10000):
+  total_steps.append(random_walk2D(step=1000))
+
+bins = bins = list(range(0, 1001, 5))
+sns.histplot(total_steps, bins=bins, kde=True,color='b', line_kws={'color': 'red', 'linestyle': '--', 'linewidth': 2})
+plt.xlabel('Total Steps')
+plt.ylabel('Counts')
+plt.show()
+
+"""# **9.the Number of paths for SAW**"""
+
+#here i count every possible RAW using recurssive function,which at each step calculates total possible ways from the beggining.
+def generate_saws(N):
+    if N == 0:
+        return [np.array([[0, 0]])]
+
+    walks = []
+    for walk in generate_saws(N-1):
+        last_pos =walk[-1]
+        for d in [np.array([1,0]), np.array([-1,0]), np.array([0,1]), np.array([0,-1])]:
+            new_pos =last_pos+d
+            if not any(np.array_equal(new_pos, pos) for pos in walk):
+                walks.append(np.vstack([walk, new_pos]))
+    return walks
+
+
+
+counts = {'SAW': [], 'Free': [], 'Ratio': []}
+
+for N in range(1, 10):#only 20 steps
+    saws = generate_saws(N)
+    free_walks = 4**N
+    counts['SAW'].append(len(saws))
+    counts['Free'].append(free_walks)
+    counts['Ratio'].append(len(saws)/free_walks)
+
+
+plt.figure(figsize=(12, 4))
+
+#lets compare free random Walk vs SAW
+plt.subplot(121)
+plt.plot(range(1,10), counts['SAW'], 'ro-', label='SAW')
+plt.plot(range(1,10), counts['Free'], 'bs-', label='Free')
+plt.xlabel('Walk length (N)')
+plt.ylabel('Number of walks')
+plt.legend()
+
+# Ratio plot
+plt.subplot(122)
+plt.plot(range(1,10), counts['Ratio'], 'g^-')
+plt.xlabel('Walk length (N)')
+plt.ylabel('SAW/Free ratio')
+
+plt.tight_layout()
 plt.show()
