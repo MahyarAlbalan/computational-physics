@@ -204,5 +204,54 @@ plt.plot(feature, p, color = 'red', label = 'Prediction')
 plt.legend()
 plt.show()
 
-"""4."""
+"""# **4.Centeral Limit theorem**"""
 
+#first i will create N=100,000 random numbers between 0 and 9, then calculate sum of the k random number chosen from this 100,000 numbers
+N = 100000
+k = [5, 10 ,100, 1000]
+numbers = np.random.randint(0, 10, N)
+for i, k in enumerate(k):
+  sum = []
+
+  for j in range(10000):
+    idx = np.random.choice(N, size=k, replace=False)
+    sum.append(np.sum(numbers[idx]))
+
+  sns.histplot(sum, bins=(i+1)*20,kde=True)
+  plt.title(f'$N = {N}, k = {k}$')
+  plt.xlabel('Value')
+  plt.ylabel('Frequency')
+  plt.tight_layout()
+  plt.show()
+
+
+#as you can see from this figures the distributions are normal as CLT predicted.
+
+"""# **5.Generating a Gaussian distribution from a Normal distribution**"""
+
+k = 10000#crearing samples with 10000 numbers
+sigma = 1#for simplicity
+X=[]
+Y=[]
+for i in range(k):
+  x = np.random.rand()
+  y = np.random.rand()
+  r =np.sqrt(-2*sigma**2*np.log(x))
+  theta = 2*np.pi*y
+  X.append(r*np.cos(theta))
+  Y.append(r*np.sin(theta))
+
+sns.histplot(X, bins=100,kde=True)
+plt.title(f'$N = {k}$')
+plt.xlabel('Value')
+plt.ylabel('Frequency')
+plt.tight_layout()
+plt.show()
+
+#lets fit a Gaussian model to this Data to confirm it is guassian
+from sklearn.mixture import GaussianMixture
+model = GaussianMixture(n_components=1, random_state=0).fit(np.array(X).reshape(-1, 1))
+avg = model.means_[0][0]
+std = np.sqrt(model.covariances_[0][0])
+print(avg, std)
+#which as expected is normal distribution with sigma = 1 .
