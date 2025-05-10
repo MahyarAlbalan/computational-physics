@@ -319,7 +319,7 @@ final_result = pd.merge(agg_data, max_corr_temp, left_index=True, right_index=Tr
 final_result
 
 final_result = final_result.applymap(lambda x: f'{x:.2e}')
-fig, ax = plt.subplots(figsize=(10, 4))  # You can adjust the size as needed
+fig, ax = plt.subplots(figsize=(10, 4))
 ax.axis('off')
 table = ax.table(cellText=final_result.values, colLabels=final_result.columns, loc='center')
 table.auto_set_font_size(False)
@@ -403,4 +403,6 @@ y = D['Heat Capacity'].values
 model.fit(X,y)
 p = model.predict(X)
 model.coef_[0]
+
+
 
