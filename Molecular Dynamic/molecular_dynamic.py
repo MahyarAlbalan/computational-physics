@@ -90,7 +90,7 @@ en
 import matplotlib as mpl
 mpl.rcParams['animation.embed_limit'] = 2000
 #now we have accelarations based on positions so i can go on and calculate dynamic of system in fixed intervals
-def animation(E,frame=500, N=100, L=200, k=10, dt= 0.02):
+def animation(E,frame=350, N=100, L=200, k=100, dt= 0.001):
   positions = initial_positions(N)
   velocities = initial_vel(E, N)
   n_left = pd.Series([100])
@@ -100,6 +100,7 @@ def animation(E,frame=500, N=100, L=200, k=10, dt= 0.02):
   a = lj(positions)
 
   fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(8,12))
+
   ax1.grid(False)
   ax2.set_title("the number of particles in the left side")
   ax1.set_xlim(0, 200)
@@ -109,8 +110,9 @@ def animation(E,frame=500, N=100, L=200, k=10, dt= 0.02):
   ax2.set_xlabel('time')
 
   ax3.set_ylim(0.5 * En[0] , 1.5 * En[0])
-  ax2.set_title('Energy')
+  ax3.set_title('Energy')
   ax3.set_xlabel('time')
+  plt.tight_layout()
 
   plot1 = ax1.scatter([], [], s = 20)
   plot2, = ax2.plot([], [])
@@ -142,10 +144,10 @@ def animation(E,frame=500, N=100, L=200, k=10, dt= 0.02):
     return plot1, plot2, plot3
 
 
-  ani = FuncAnimation(fig,update,frames = frame, interval = 200, blit= True)
+  ani = FuncAnimation(fig,update,frames = frame, interval = 100, blit= True)
   return HTML(ani.to_jshtml()), velocities_all, positions_all
 
-E = [100000]
+E = [1000000]
 velocities_history = []
 pos_history = []
 for e in E:
@@ -167,7 +169,7 @@ def VAC(velocities_all):
 
 for i in range(len(E)):
   vac = VAC(velocities_history[i])
-  t = np.arange(len(vac)) * 0.2
+  t = np.arange(len(vac)) * 0.1
   plt.plot(t, vac)
   plt.title('Velocities Auto Correlation')
   plt.xlabel('time')
@@ -183,9 +185,9 @@ def temp(velocities_history,N=100):
   return T
 
 T = temp(velocities_history[0])
-t = np.arange(len(velocities_history[0])) * 0.2
+t = np.arange(len(velocities_history[0])) * 0.1
 plt.plot(t,T)
-plt.ylim(np.min(T) * 0.95, np.max(T) * 1.05)
+plt.ylim(np.min(T), np.max(T))
 plt.ylabel('Tempreture')
 plt.xlabel('Time')
 plt.show()
@@ -206,7 +208,7 @@ def pressure(T, positions_all, N=100, L=200, e=1):
 
   return P
 
-P = pressure(T, pos_history)
+P = pressure(T, pos_history[0])
 plt.plot(t, P)
 plt.xlabel('time')
 plt.ylabel('pressure')
@@ -221,11 +223,80 @@ def defussion(positions_all, dt = 0.2, L=200):
     D.append(1 / (4 * i * dt) * np.mean(np.sum((( (r - r0) + L/2 )%L - L/2) ** 2, axis = 1)))
 
   return D
-
-plt.plot(t, D)
+D = defussion(pos_history[0])
+plt.plot(t[1:], D)
 plt.xlabel('time')
 plt.ylabel('difussion coeficient')
 plt.show()
+
+np.mean(D[-1000:])
+
+def phase_change_animation(E,frame=300, N=100, L=200, k=100, dt= 0.001, scale=0.9999):
+  positions = initial_positions(N)
+  velocities = initial_vel(E, N)
+  n_left = pd.Series([100])
+  En = pd.Series(energy(positions, velocities))
+  velocities_all = np.zeros((frame, N, 2))
+  positions_all = np.zeros((frame, N, 2))
+  a = lj(positions)
+
+  fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(8,12))
+  ax1.grid(False)
+  ax2.set_title("the number of particles in the left side")
+  ax1.set_xlim(0, 200)
+  ax1.set_ylim(0, L)
+
+  ax2.set_ylim(0, N)
+  ax2.set_xlabel('time')
+
+  ax3.set_ylim(0.5 * En[0] , 1.5 * En[0])
+  ax3.set_title('Energy')
+  ax3.set_xlabel('time')
+  ax3.set_ylim(0, En.iloc[0] * 1.5)
+  plt.tight_layout()
+
+  plot1 = ax1.scatter([], [], s = 20)
+  plot2, = ax2.plot([], [])
+  plot3, = ax3.plot([], [])
+  T = 0
+  t = [0]
+  def update(frame, dt = dt, k=k):
+    nonlocal positions, velocities, L, n_left, T, velocities_all, t, E, a, positions_all
+    T = T + k * dt
+    t.append(T)
+    velocities_all[frame] = velocities.copy()
+    positions_all[frame] = positions.copy()
+
+    for _ in range(k):
+      velocities += 0.5 * a * dt #i used velocity verlet
+      velocities *= scale
+      positions = (positions + velocities * dt) % L
+      a = lj(positions)
+      velocities += 0.5 * a * dt
+
+
+    n_left.loc[len(n_left)] = np.sum(positions[:, 0] < (L / 2))
+    En.loc[len(En)] = energy(positions, velocities)
+
+    plot1.set_offsets(positions)
+    plot2.set_data(t, n_left)
+    plot3.set_data(t, En)
+    ax2.set_xlim(0, T)
+    ax3.set_xlim(0, T)
+    return plot1, plot2, plot3
+
+
+  ani = FuncAnimation(fig,update,frames = frame, interval = 100, blit= True)
+  return HTML(ani.to_jshtml()), velocities_all, positions_all
+
+E = [100000]
+velocities_history = []
+pos_history = []
+for e in E:
+  animation, vel, pos_all = phase_change_animation(e)
+  velocities_history.append(vel)
+  pos_history.append(vel)
+  display(animation)
 
 def temp(vel, N=100):
   v = vel ** 2
@@ -249,21 +320,21 @@ def pressure(T, pos, N=100, L=200, e=1):
 
 
 
-def md(E, dt=0.01, N=100, L=200, n=1e4):
+def md(E, dt=0.01, N=100, L=200, n=5000):
   pos = initial_positions(N)
   vel = initial_vel(E, N)
   En = pd.Series(energy(pos, vel))
-  vel_all = np.zeros((n, N, 2))
-  pos_all = np.zeros((n, N, 2))
-  a = lj(pos)
+  vel_all = np.zeros((int(n), N, 2))
+  pos_all = np.zeros((int(n), N, 2))
+  a = lj(pos, N=N)
   T = [temp(vel)]
   P = [pressure(temp(vel), pos)]
-  V = N / L ** 2#volume in reduced units
+  V = L ** 2
 
   for i in range(n):
       vel += 0.5 * a * dt
       pos = (pos + vel * dt) % L
-      a = lj(pos)
+      a = lj(pos, N=N)
       vel += 0.5 * a * dt
       vel_all[i] = vel
       pos_all[i] = pos
@@ -273,16 +344,14 @@ def md(E, dt=0.01, N=100, L=200, n=1e4):
   T = np.array(T)
   return P, T, V
 
-E = np.arange(1, 100) * 1000
-N = [100]
+E = [1000, 100000, 10000, 1000000, 100000000, 10000000, 50000, 500000, 5000000]
 
 P = []
 T = []
 V = []
 
 for e in E:
-  for num in N:
-    p, t, v = md(E=e, N=num)
+    p, t, v = md(E=e)
     P.append(np.mean(p[-1000:]))
     T.append(np.mean(t[-1000:]))
     V.append(v)
@@ -291,77 +360,18 @@ V = np.array(V)
 P = np.array(P)
 T = np.array(T)
 
-def van(T, V, a, b):
-  return T / (V - b) - a / V ** 2
+from sklearn.linear_model import  LinearRegression
+model = LinearRegression()
+model.fit(T.reshape(-1,1), P)
+B = model.coef_[0]
+A = model.intercept_
+a_r = L ** 4 / 100 ** 2 * A
+b_r = 1 / B + L ** 2 / 100
 
-params, _ = curve_fit(van, [T, V], P)
-a, b = params
-a = a * 1.656 * 1e-21 * (3.4 * 1e-10) ** 3
-b = b * (3.4 * 1e-10) ** 3
-a *= Na**2
-b *= Na
+Na = 6.022e23
+sigma = 3.4e-10
+epsilon = 1.656e-21
+
+a = a_r * epsilon * sigma**3 * Na**2
+b = b_r * sigma**3 * Na
 print(a, b)
-
-def phase_change_animation(E,frame=500, N=100, L=200, k=100, dt= 0.02, scale=0.9999):
-  positions = initial_positions(N)
-  velocities = initial_vel(E, N)
-  n_left = pd.Series([100])
-  En = pd.Series(energy(positions, velocities))
-  velocities_all = np.zeros((frame, N, 2))
-  positions_all = np.zeros((frame, N, 2))
-  a = lj(positions)
-
-  fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(8,12))
-  ax1.grid(False)
-  ax2.set_title("the number of particles in the left side")
-  ax1.set_xlim(0, 200)
-  ax1.set_ylim(0, L)
-
-  ax2.set_ylim(0, N)
-  ax2.set_xlabel('time')
-
-  ax3.set_ylim(0.5 * En[0] , 1.5 * En[0])
-  ax2.set_title('Energy')
-  ax3.set_xlabel('time')
-
-  plot1 = ax1.scatter([], [], s = 20)
-  plot2, = ax2.plot([], [])
-  plot3, = ax3.plot([], [])
-  T = 0
-  t = [0]
-  def update(frame, dt = dt, k=k):
-    nonlocal positions, velocities, L, n_left, T, velocities_all, t, E, a, positions_all
-    T = T + k * dt
-    t.append(T)
-    velocities_all[frame] = velocities.copy()
-    positions_all[frame] = positions.copy()
-
-    for _ in range(k):
-      velocities += 0.5 * a * dt * scale#i used velocity verlet
-      positions = (positions + velocities * dt) % L
-      a = lj(positions)
-      velocities += 0.5 * a * dt
-
-
-    n_left.loc[len(n_left)] = np.sum(positions[:, 0] < (L / 2))
-    En.loc[len(En)] = energy(positions, velocities)
-
-    plot1.set_offsets(positions)
-    plot2.set_data(t, n_left)
-    plot3.set_data(t, En)
-    ax2.set_xlim(0, T)
-    ax3.set_xlim(0, T)
-    return plot1, plot2, plot3
-
-
-  ani = FuncAnimation(fig,update,frames = frame, interval = 200, blit= True)
-  return HTML(ani.to_jshtml()), velocities_all, positions_all
-
-E = [100000]
-velocities_history = []
-pos_history = []
-for e in E:
-  animation, vel, pos_all = animation(e)
-  velocities_history.append(vel)
-  pos_history.append(vel)
-  display(animation)
