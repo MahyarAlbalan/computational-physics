@@ -83,6 +83,11 @@ plt.xlabel('BM(threshold)')
 plt.ylabel('mean counts')
 plt.show()
 
+plt.plot(B, mean_counts)
+plt.xlabel('BM(threshold)')
+plt.ylabel('mean counts')
+plt.show()
+
 R = np.arange(0.05, 0.75, 0.1)
 mean_counts_r = []
 for r in R :
@@ -90,7 +95,7 @@ for r in R :
   for i in range(5):
     ani, c,_= Schelling_Model_of_Segregation_animation(b=0.7, r= r, frame= int(1000 * r))
     count += c
-  mean_counts_r.append(np.mean(count))
+  mean_counts_r.append(count/5)
 
 plt.plot(R, mean_counts_r)
 plt.xlabel('density of empty cells')
@@ -125,20 +130,19 @@ def all_clusters(net, seen):
     return np.array(sizes)
 
 
-B = [0.25, 0.375, 0.5, 0.625, 0.75, 0.875]
-R = [0.15, 0.25, 0.45 , 0.5]
+B = [ 0.375, 0.5, 0.625, 0.75, 0.875]
+R = [0.15, 0.25, 0.5]
+s = np.zeros((len(R), len(B)))
 
-
-for r in R:
-  s = []
-  for b in B:
+for i,r in enumerate(R):
+  for j,b in enumerate(B):
     _, _, net= Schelling_Model_of_Segregation_animation(b=b, r= r, frame= int(1000 * r))
     nc = all_clusters(net, seen = [])
-    S = 2 / (net.shape[0] * net.shape[1]*(1-r)) ** 2 * np.sum(nc ** 2)
-    s.append(S)
+    s[i, j] = 2 / (net.shape[0] * net.shape[1]*(1-r)) ** 2 * np.sum(nc ** 2)
 
-  plt.plot(B, s)
-  plt.title(f'density of empty cells = {r}')
-  plt.xlabel('BM(threshold)')
+for i in range(s.shape[0]):
+  plt.plot(B, s[i, :])
+  plt.xlabel('Bm(threshold)')
   plt.ylabel('Segregation coeficient')
+  plt.title(f'density of empty cells = {R[i]}')
   plt.show()
